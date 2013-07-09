@@ -24,8 +24,10 @@ References:
 var fs = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
+var rest = require('restler');
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
+var file = "";
 
 var assertFileExists = function(infile) {
     var instr = infile.toString();
@@ -61,14 +63,31 @@ var clone = function(fn) {
     return fn.bind({});
 };
 
+function checkAndPrint(fileName, checks){
+    var checkJson = checkHtmlFile(fileName, checks);
+    var outJson = JSON.stringify(checkJson, null, 4);
+    console.log(outJson);
+}
+
 if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
+    	.option('-u, --url <url>', 'URL to web page')
         .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+    if(program.url){
+	rest.get('http://evening-bastion-8834.herokuapp.com/').on('complete', function(result) {
+		if (result instanceof Error) {
+			sys.puts('Error: ' + result.message);
+  		} else {
+	    		fs.writeFileSync("fileFromURL", result);
+	    		file = "fileFromURL";
+			checkAndPrint("fileFromURL", program.checks)
+  		}
+	});  
+	} else {
+	checkAndPrint(program.file, program.checks);
+	}
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
